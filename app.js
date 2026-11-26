@@ -5,7 +5,8 @@ const STORAGE_ORDERS_KEY = "techservice_orders_v1";
 const STORAGE_CONFIG_KEY = "techservice_config_v1";
 
 const DEFAULT_CONFIG = {
-  workshopName: "TechService Pro",
+  workshopName: "CELDON STORE",
+  workshopNit: "1121897207-7",
   workshopPhone: "310 000 0000",
   workshopAddress: "Centro Técnico Principal",
   workshopTerms:
@@ -13,9 +14,10 @@ const DEFAULT_CONFIG = {
 };
 
 let orders = JSON.parse(localStorage.getItem(STORAGE_ORDERS_KEY)) || [];
-let config = JSON.parse(localStorage.getItem(STORAGE_CONFIG_KEY)) || { ...DEFAULT_CONFIG };
+let config = { ...DEFAULT_CONFIG, ...(JSON.parse(localStorage.getItem(STORAGE_CONFIG_KEY)) || {}) };
 let currentFilter = "Todos";
 let activeTicketOrder = null;
+let editingOrderId = null;
 let patternSequence = [];
 let isDrawingPattern = false;
 
@@ -38,22 +40,25 @@ document.addEventListener("DOMContentLoaded", () => {
 // ==========================================
 // NAVEGACIÓN ENTRE PESTAÑAS
 // ==========================================
-function setupNavigation() {
+function switchTab(tabName) {
   const tabBtns = document.querySelectorAll(".tab-btn");
   const views = document.querySelectorAll(".tab-view");
 
-  tabBtns.forEach((btn) => {
+  tabBtns.forEach((b) => b.classList.toggle("active", b.dataset.tab === tabName));
+  views.forEach((v) => v.classList.toggle("active", v.id === `tab-${tabName}`));
+
+  if (tabName === "nuevo") {
+    updateNextOrderBadge();
+  }
+}
+
+function setupNavigation() {
+  document.querySelectorAll(".tab-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
-      tabBtns.forEach((b) => b.classList.remove("active"));
-      views.forEach((v) => v.classList.remove("active"));
-
-      btn.classList.add("active");
-      const targetId = `tab-${btn.dataset.tab}`;
-      document.getElementById(targetId).classList.add("active");
-
-      if (btn.dataset.tab === "nuevo") {
-        updateNextOrderBadge();
+      if (btn.dataset.tab === "nuevo" && editingOrderId) {
+        resetIntakeFormMode();
       }
+      switchTab(btn.dataset.tab);
     });
   });
 }
@@ -64,14 +69,20 @@ function setupNavigation() {
 function generateOrderNumber() {
   if (orders.length === 0) return "ORD-0001";
   const maxNum = orders.reduce((max, o) => {
-    const num = parseInt(o.orderNumber.replace("ORD-", ""), 10) || 0;
+    const num = parseInt((o.orderNumber || "").replace("ORD-", ""), 10) || 0;
     return num > max ? num : max;
   }, 0);
   return `ORD-${String(maxNum + 1).padStart(4, "0")}`;
 }
 
 function updateNextOrderBadge() {
-  document.getElementById("nextOrderBadge").textContent = generateOrderNumber();
+  const badge = document.getElementById("nextOrderBadge");
+  if (editingOrderId) {
+    const existing = orders.find((o) => o.id === editingOrderId);
+    badge.textContent = existing ? `${existing.orderNumber} (Editando)` : generateOrderNumber();
+  } else {
+    badge.textContent = generateOrderNumber();
+  }
 }
 
 function formatMoney(amount) {
@@ -108,7 +119,6 @@ function setupPatternLock() {
     });
   });
 
-  // Soporte táctil continuo en móviles/tablets
   pad.addEventListener("pointermove", (e) => {
     if (!isDrawingPattern) return;
     const target = document.elementFromPoint(e.clientX, e.clientY);
@@ -129,12 +139,23 @@ function resetPatternLock() {
   updatePatternUI();
 }
 
+function setPatternSequence(seqArray) {
+  resetPatternLock();
+  seqArray.forEach((val) => {
+    const dot = document.querySelector(`.pattern-dot[data-dot="${val}"]`);
+    if (dot && !patternSequence.includes(val)) {
+      patternSequence.push(val);
+      dot.classList.add("active");
+    }
+  });
+  updatePatternUI();
+}
+
 function updatePatternUI() {
   const display = document.getElementById("patternDisplay");
   const svg = document.getElementById("patternLines");
   display.textContent = patternSequence.length ? patternSequence.join(" → ") : "Ninguna";
 
-  // Dibujar líneas SVG conectando los puntos
   svg.innerHTML = "";
   const coords = {
     "1": [30, 30], "2": [90, 30], "3": [150, 30],
@@ -160,33 +181,102 @@ function updatePatternUI() {
 // ==========================================
 // CÁLCULO AUTOMÁTICO DE SALDO
 // ==========================================
+function recalculateBalanceInput() {
+  const total = parseFloat(document.getElementById("totalCost").value) || 0;
+  const advance = parseFloat(document.getElementById("advancePay").value) || 0;
+  const balance = Math.max(0, total - advance);
+  document.getElementById("balanceDisplay").value = formatMoney(balance);
+}
+
 function setupFinanceCalculator() {
-  const totalInput = document.getElementById("totalCost");
-  const advanceInput = document.getElementById("advancePay");
-  const balanceDisplay = document.getElementById("balanceDisplay");
-
-  const recalc = () => {
-    const total = parseFloat(totalInput.value) || 0;
-    const advance = parseFloat(advanceInput.value) || 0;
-    const balance = Math.max(0, total - advance);
-    balanceDisplay.value = formatMoney(balance);
-  };
-
-  totalInput.addEventListener("input", recalc);
-  advanceInput.addEventListener("input", recalc);
+  document.getElementById("totalCost").addEventListener("input", recalculateBalanceInput);
+  document.getElementById("advancePay").addEventListener("input", recalculateBalanceInput);
 }
 
 // ==========================================
-// GUARDAR NUEVA ORDEN DE INGRESO
+// MODO CREAR / EDITAR ORDEN DE INGRESO
 // ==========================================
+function resetIntakeFormMode() {
+  editingOrderId = null;
+  document.getElementById("intakeForm").reset();
+  resetPatternLock();
+  document.getElementById("balanceDisplay").value = "$0";
+  document.getElementById("formTitle").textContent = "Nueva Orden de Servicio Técnico";
+  document.getElementById("formSubtitle").textContent =
+    "Registra los datos del cliente, estado físico del equipo y presupuesto inicial.";
+  document.getElementById("submitOrderBtn").textContent = "💾 Guardar Orden y Ver Ticket";
+  document.getElementById("cancelEditBtn").classList.add("hidden");
+  updateNextOrderBadge();
+}
+
+window.editOrderById = function (id) {
+  const order = orders.find((o) => o.id === id);
+  if (!order) return;
+
+  document.getElementById("ticketModal").classList.add("hidden");
+  editingOrderId = order.id;
+
+  document.getElementById("formTitle").textContent = `Editar Orden ${order.orderNumber}`;
+  document.getElementById("formSubtitle").textContent =
+    "Modifica los datos del ticket o del servicio y guarda los cambios.";
+  document.getElementById("submitOrderBtn").textContent = "💾 Guardar Cambios del Ticket";
+  document.getElementById("cancelEditBtn").classList.remove("hidden");
+
+  document.getElementById("clientName").value = order.clientName || "";
+  document.getElementById("clientPhone").value = order.clientPhone || "";
+  document.getElementById("clientDoc").value = order.clientDoc || "";
+
+  const brandSelect = document.getElementById("deviceBrand");
+  const hasBrandOption = Array.from(brandSelect.options).some((opt) => opt.value === order.deviceBrand);
+  brandSelect.value = hasBrandOption ? order.deviceBrand : "Otra";
+
+  document.getElementById("deviceModel").value = order.deviceModel || "";
+  document.getElementById("deviceImei").value =
+    order.deviceImei && order.deviceImei !== "No registrado" ? order.deviceImei : "";
+  document.getElementById("deviceColor").value = order.deviceColor || "";
+  document.getElementById("devicePin").value = order.devicePin || "";
+
+  const parsedPattern = order.devicePattern
+    ? order.devicePattern.split("-").map((s) => s.trim()).filter(Boolean)
+    : [];
+  setPatternSequence(parsedPattern);
+
+  document.querySelectorAll("#conditionChecklist input[type='checkbox']").forEach((cb) => {
+    cb.checked = Array.isArray(order.conditions) && order.conditions.includes(cb.value);
+  });
+
+  document.querySelectorAll("#accessoriesChecklist input[type='checkbox']").forEach((cb) => {
+    cb.checked = Array.isArray(order.accessories) && order.accessories.includes(cb.value);
+  });
+
+  document.getElementById("reportedIssue").value = order.reportedIssue || "";
+  document.getElementById("techNotes").value = order.techNotes || "";
+  document.getElementById("totalCost").value = order.totalCost || 0;
+  document.getElementById("advancePay").value = order.advancePay || 0;
+  recalculateBalanceInput();
+
+  document.getElementById("initialStatus").value = order.status || "Recibido";
+  document.getElementById("deliveryDate").value = order.deliveryDate || "";
+
+  updateNextOrderBadge();
+  switchTab("nuevo");
+  window.scrollTo({ top: 0, behavior: "smooth" });
+};
+
 function setupFormSubmit() {
   const form = document.getElementById("intakeForm");
   const resetBtn = document.getElementById("resetFormBtn");
+  const cancelEditBtn = document.getElementById("cancelEditBtn");
 
   resetBtn.addEventListener("click", () => {
     form.reset();
     resetPatternLock();
     document.getElementById("balanceDisplay").value = "$0";
+  });
+
+  cancelEditBtn.addEventListener("click", () => {
+    resetIntakeFormMode();
+    switchTab("panel");
   });
 
   form.addEventListener("submit", (e) => {
@@ -202,43 +292,71 @@ function setupFormSubmit() {
 
     const totalCost = parseFloat(document.getElementById("totalCost").value) || 0;
     const advancePay = parseFloat(document.getElementById("advancePay").value) || 0;
+    const balance = Math.max(0, totalCost - advancePay);
 
-    const newOrder = {
-      id: Date.now().toString(),
-      orderNumber: generateOrderNumber(),
-      createdAt: new Date().toLocaleDateString("es-CO"),
-      clientName: document.getElementById("clientName").value.trim(),
-      clientPhone: document.getElementById("clientPhone").value.trim(),
-      clientDoc: document.getElementById("clientDoc").value.trim(),
-      deviceBrand: document.getElementById("deviceBrand").value,
-      deviceModel: document.getElementById("deviceModel").value.trim(),
-      deviceImei: document.getElementById("deviceImei").value.trim() || "No registrado",
-      deviceColor: document.getElementById("deviceColor").value.trim(),
-      devicePin: document.getElementById("devicePin").value.trim(),
-      devicePattern: patternSequence.length ? patternSequence.join("-") : "",
-      conditions: conditions.length ? conditions : ["Sin novedades reportadas"],
-      accessories: accessories.length ? accessories : ["Solo equipo"],
-      reportedIssue: document.getElementById("reportedIssue").value.trim(),
-      techNotes: document.getElementById("techNotes").value.trim(),
-      totalCost,
-      advancePay,
-      balance: Math.max(0, totalCost - advancePay),
-      status: document.getElementById("initialStatus").value,
-      deliveryDate: document.getElementById("deliveryDate").value
-    };
+    let savedOrder;
 
-    orders.unshift(newOrder);
+    if (editingOrderId) {
+      const idx = orders.findIndex((o) => o.id === editingOrderId);
+      if (idx !== -1) {
+        savedOrder = {
+          ...orders[idx],
+          clientName: document.getElementById("clientName").value.trim(),
+          clientPhone: document.getElementById("clientPhone").value.trim(),
+          clientDoc: document.getElementById("clientDoc").value.trim(),
+          deviceBrand: document.getElementById("deviceBrand").value,
+          deviceModel: document.getElementById("deviceModel").value.trim(),
+          deviceImei: document.getElementById("deviceImei").value.trim() || "No registrado",
+          deviceColor: document.getElementById("deviceColor").value.trim(),
+          devicePin: document.getElementById("devicePin").value.trim(),
+          devicePattern: patternSequence.length ? patternSequence.join("-") : "",
+          conditions: conditions.length ? conditions : ["Sin novedades reportadas"],
+          accessories: accessories.length ? accessories : ["Solo equipo"],
+          reportedIssue: document.getElementById("reportedIssue").value.trim(),
+          techNotes: document.getElementById("techNotes").value.trim(),
+          totalCost,
+          advancePay,
+          balance,
+          status: document.getElementById("initialStatus").value,
+          deliveryDate: document.getElementById("deliveryDate").value
+        };
+        orders[idx] = savedOrder;
+      }
+    } else {
+      savedOrder = {
+        id: Date.now().toString(),
+        orderNumber: generateOrderNumber(),
+        createdAt: new Date().toLocaleDateString("es-CO"),
+        clientName: document.getElementById("clientName").value.trim(),
+        clientPhone: document.getElementById("clientPhone").value.trim(),
+        clientDoc: document.getElementById("clientDoc").value.trim(),
+        deviceBrand: document.getElementById("deviceBrand").value,
+        deviceModel: document.getElementById("deviceModel").value.trim(),
+        deviceImei: document.getElementById("deviceImei").value.trim() || "No registrado",
+        deviceColor: document.getElementById("deviceColor").value.trim(),
+        devicePin: document.getElementById("devicePin").value.trim(),
+        devicePattern: patternSequence.length ? patternSequence.join("-") : "",
+        conditions: conditions.length ? conditions : ["Sin novedades reportadas"],
+        accessories: accessories.length ? accessories : ["Solo equipo"],
+        reportedIssue: document.getElementById("reportedIssue").value.trim(),
+        techNotes: document.getElementById("techNotes").value.trim(),
+        totalCost,
+        advancePay,
+        balance,
+        status: document.getElementById("initialStatus").value,
+        deliveryDate: document.getElementById("deliveryDate").value
+      };
+      orders.unshift(savedOrder);
+    }
+
     saveOrders();
-
-    form.reset();
-    resetPatternLock();
-    document.getElementById("balanceDisplay").value = "$0";
-    updateNextOrderBadge();
+    resetIntakeFormMode();
     renderOrders();
+    switchTab("panel");
 
-    // Cambiar al panel y abrir el comprobante inmediatamente
-    document.querySelector('.tab-btn[data-tab="panel"]').click();
-    openTicketModal(newOrder);
+    if (savedOrder) {
+      openTicketModal(savedOrder);
+    }
   });
 }
 
@@ -253,7 +371,6 @@ function renderOrders() {
   const listEl = document.getElementById("ordersList");
   const query = document.getElementById("searchInput").value.toLowerCase().trim();
 
-  // Actualizar KPIs
   const totalOrders = orders.length;
   const inProcess = orders.filter((o) =>
     ["Recibido", "En Diagnóstico", "En Reparación"].includes(o.status)
@@ -268,7 +385,6 @@ function renderOrders() {
   document.getElementById("kpiListos").textContent = ready;
   document.getElementById("kpiSaldo").textContent = formatMoney(pendingBalance);
 
-  // Filtrar lista
   const filtered = orders.filter((o) => {
     const matchesStatus = currentFilter === "Todos" || o.status === currentFilter;
     const matchesQuery =
@@ -317,7 +433,8 @@ function renderOrders() {
               <option value="Listo para Entrega" ${order.status === "Listo para Entrega" ? "selected" : ""}>Listo</option>
               <option value="Entregado" ${order.status === "Entregado" ? "selected" : ""}>Entregado</option>
             </select>
-            <button class="icon-btn" title="Ver Ticket" onclick="viewTicketById('${order.id}')">🧾</button>
+            <button class="icon-btn" title="Ver Ticket" onclick="viewTicketById('${order.id}')">🧾 Ver Ticket</button>
+            <button class="icon-btn" title="Editar Ticket" onclick="editOrderById('${order.id}')">✏️ Editar Ticket</button>
             <button class="icon-btn danger" title="Eliminar" onclick="deleteOrder('${order.id}')">🗑️</button>
           </div>
         </div>
@@ -351,6 +468,9 @@ window.changeOrderStatus = function (id, newStatus) {
 
 window.deleteOrder = function (id) {
   if (!confirm("¿Seguro que deseas eliminar esta orden de servicio?")) return;
+  if (editingOrderId === id) {
+    resetIntakeFormMode();
+  }
   orders = orders.filter((o) => o.id !== id);
   saveOrders();
   renderOrders();
@@ -362,12 +482,13 @@ window.viewTicketById = function (id) {
 };
 
 // ==========================================
-// MODAL DE TICKET, IMPRESIÓN Y WHATSAPP
+// MODAL DE TICKET, EDICIÓN, IMPRESIÓN Y WHATSAPP
 // ==========================================
 function openTicketModal(order) {
   activeTicketOrder = order;
 
   document.getElementById("tWorkshopName").textContent = config.workshopName;
+  document.getElementById("tWorkshopNit").textContent = `NIT: ${config.workshopNit || "1121897207-7"}`;
   document.getElementById("tWorkshopInfo").textContent = `Tel: ${config.workshopPhone} | ${config.workshopAddress}`;
   document.getElementById("tOrderNumber").textContent = order.orderNumber;
   document.getElementById("tDate").textContent = `Ingreso: ${order.createdAt}`;
@@ -404,6 +525,12 @@ function setupModalEvents() {
   document.getElementById("closeModalBtn").addEventListener("click", closeFn);
   document.getElementById("closeModalBackdrop").addEventListener("click", closeFn);
 
+  document.getElementById("modalEditTicketBtn").addEventListener("click", () => {
+    if (activeTicketOrder) {
+      window.editOrderById(activeTicketOrder.id);
+    }
+  });
+
   document.getElementById("printTicketBtn").addEventListener("click", () => {
     window.print();
   });
@@ -415,7 +542,7 @@ function setupModalEvents() {
     const phoneWithCode = cleanPhone.length === 10 ? `57${cleanPhone}` : cleanPhone;
 
     const msg =
-      `Hola *${o.clientName}*, recibimos tu equipo en *${config.workshopName}*.\n\n` +
+      `Hola *${o.clientName}*, recibimos tu equipo en *${config.workshopName}* (NIT: ${config.workshopNit}).\n\n` +
       `📋 *Orden:* ${o.orderNumber}\n` +
       `📱 *Equipo:* ${o.deviceBrand} ${o.deviceModel}\n` +
       `🛠️ *Falla:* ${o.reportedIssue}\n` +
@@ -433,7 +560,10 @@ function setupModalEvents() {
 // ==========================================
 function applyWorkshopConfig() {
   document.getElementById("headerWorkshopName").textContent = config.workshopName;
+  document.getElementById("headerWorkshopNit").textContent =
+    `NIT: ${config.workshopNit || "1121897207-7"} • Gestión Técnica de Celulares`;
   document.getElementById("cfgWorkshopName").value = config.workshopName;
+  document.getElementById("cfgWorkshopNit").value = config.workshopNit || "1121897207-7";
   document.getElementById("cfgWorkshopPhone").value = config.workshopPhone;
   document.getElementById("cfgWorkshopAddress").value = config.workshopAddress;
   document.getElementById("cfgWorkshopTerms").value = config.workshopTerms;
@@ -444,28 +574,27 @@ function setupConfigAndBackup() {
     e.preventDefault();
     config = {
       workshopName: document.getElementById("cfgWorkshopName").value.trim() || DEFAULT_CONFIG.workshopName,
+      workshopNit: document.getElementById("cfgWorkshopNit").value.trim() || DEFAULT_CONFIG.workshopNit,
       workshopPhone: document.getElementById("cfgWorkshopPhone").value.trim(),
       workshopAddress: document.getElementById("cfgWorkshopAddress").value.trim(),
       workshopTerms: document.getElementById("cfgWorkshopTerms").value.trim()
     };
     localStorage.setItem(STORAGE_CONFIG_KEY, JSON.stringify(config));
     applyWorkshopConfig();
-    alert("Configuración del taller guardada correctamente.");
+    alert("Configuración de CELDON STORE guardada correctamente.");
   });
 
-  // Exportar JSON
   document.getElementById("exportDataBtn").addEventListener("click", () => {
     const dataStr = JSON.stringify({ config, orders }, null, 2);
     const blob = new Blob([dataStr], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `respaldo-taller-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `respaldo-celdon-store-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
   });
 
-  // Importar JSON
   document.getElementById("importDataInput").addEventListener("change", (e) => {
     const file = e.target.files[0];
     if (!file) return;
