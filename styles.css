@@ -32,6 +32,10 @@ body {
   padding: 0 16px;
 }
 
+.hidden {
+  display: none !important;
+}
+
 /* Navbar */
 .navbar {
   background: #0f172a;
@@ -307,6 +311,7 @@ body {
   display: flex;
   gap: 6px;
   align-items: center;
+  flex-wrap: wrap;
 }
 
 .status-select {
@@ -323,7 +328,9 @@ body {
   padding: 5px 8px;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #1e293b;
 }
 
 .icon-btn:hover {
@@ -521,6 +528,7 @@ textarea:focus {
   justify-content: flex-end;
   gap: 12px;
   margin-top: 8px;
+  flex-wrap: wrap;
 }
 
 .btn-primary,
@@ -604,10 +612,6 @@ textarea:focus {
   padding: 16px;
 }
 
-.modal.hidden {
-  display: none;
-}
-
 .modal-backdrop {
   position: absolute;
   inset: 0;
@@ -618,7 +622,7 @@ textarea:focus {
   position: relative;
   background: #fff;
   width: 100%;
-  max-width: 560px;
+  max-width: 640px;
   max-height: 92vh;
   overflow-y: auto;
   border-radius: 12px;
@@ -640,6 +644,7 @@ textarea:focus {
 .modal-btns {
   display: flex;
   gap: 6px;
+  flex-wrap: wrap;
 }
 
 .btn-close {
@@ -669,6 +674,13 @@ textarea:focus {
 .ticket-header h2 {
   font-size: 1.3rem;
   text-transform: uppercase;
+}
+
+#tWorkshopNit {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #334155;
+  margin-top: 2px;
 }
 
 .ticket-order-bar {
