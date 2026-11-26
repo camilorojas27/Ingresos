@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TechService Pro - Ingreso de Dispositivos Móviles</title>
+  <title>CELDON STORE - Ingreso de Dispositivos Móviles</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -14,8 +14,8 @@
       <div class="brand">
         <div class="brand-icon">📱</div>
         <div>
-          <h1 id="headerWorkshopName">TechService Pro</h1>
-          <span class="brand-sub">Sistema de Gestión Técnica de Celulares</span>
+          <h1 id="headerWorkshopName">CELDON STORE</h1>
+          <span class="brand-sub" id="headerWorkshopNit">NIT: 1121897207-7 • Gestión Técnica de Celulares</span>
         </div>
       </div>
 
@@ -70,13 +70,13 @@
       <div id="ordersList" class="orders-grid"></div>
     </section>
 
-    <!-- VISTA 2: FORMULARIO DE NUEVO INGRESO -->
+    <!-- VISTA 2: FORMULARIO DE NUEVO INGRESO / EDICIÓN -->
     <section id="tab-nuevo" class="tab-view">
       <form id="intakeForm" class="intake-form">
         <div class="form-header">
           <div>
-            <h2>Nueva Orden de Servicio Técnico</h2>
-            <p class="text-muted">Registra los datos del cliente, estado físico del equipo y presupuesto inicial.</p>
+            <h2 id="formTitle">Nueva Orden de Servicio Técnico</h2>
+            <p class="text-muted" id="formSubtitle">Registra los datos del cliente, estado físico del equipo y presupuesto inicial.</p>
           </div>
           <span class="order-badge-preview" id="nextOrderBadge">ORD-0001</span>
         </div>
@@ -226,11 +226,13 @@
 
               <div class="row-2">
                 <div class="input-group">
-                  <label>Estado inicial</label>
+                  <label>Estado de la orden</label>
                   <select id="initialStatus">
                     <option value="Recibido">Recibido</option>
                     <option value="En Diagnóstico">En Diagnóstico</option>
                     <option value="En Reparación">En Reparación</option>
+                    <option value="Listo para Entrega">Listo para Entrega</option>
+                    <option value="Entregado">Entregado</option>
                   </select>
                 </div>
                 <div class="input-group">
@@ -243,8 +245,9 @@
         </div>
 
         <div class="form-actions">
+          <button type="button" id="cancelEditBtn" class="btn-secondary hidden">Cancelar Edición</button>
           <button type="button" id="resetFormBtn" class="btn-secondary">Limpiar Campos</button>
-          <button type="submit" class="btn-primary">💾 Guardar Orden y Ver Ticket</button>
+          <button type="submit" id="submitOrderBtn" class="btn-primary">💾 Guardar Orden y Ver Ticket</button>
         </div>
       </form>
     </section>
@@ -259,9 +262,15 @@
               <label>Nombre del Servicio Técnico</label>
               <input type="text" id="cfgWorkshopName" required>
             </div>
-            <div class="input-group">
-              <label>Teléfono / WhatsApp del Taller</label>
-              <input type="text" id="cfgWorkshopPhone">
+            <div class="row-2">
+              <div class="input-group">
+                <label>NIT</label>
+                <input type="text" id="cfgWorkshopNit" required>
+              </div>
+              <div class="input-group">
+                <label>Teléfono / WhatsApp del Taller</label>
+                <input type="text" id="cfgWorkshopPhone">
+              </div>
             </div>
             <div class="input-group">
               <label>Dirección física</label>
@@ -297,6 +306,7 @@
       <div class="modal-toolbar no-print">
         <h3>Comprobante de Ingreso</h3>
         <div class="modal-btns">
+          <button type="button" id="modalEditTicketBtn" class="btn-secondary">✏️ Editar Ticket</button>
           <button type="button" id="whatsappBtn" class="btn-whatsapp">💬 Enviar WhatsApp</button>
           <button type="button" id="printTicketBtn" class="btn-primary">🖨️ Imprimir Ticket</button>
           <button type="button" id="closeModalBtn" class="btn-close">✕</button>
@@ -306,8 +316,9 @@
       <!-- Área Imprimible -->
       <div id="printableTicket" class="ticket-sheet">
         <div class="ticket-header">
-          <h2 id="tWorkshopName">TechService Pro</h2>
-          <p id="tWorkshopInfo">Tel: 300 000 0000 | Servicio Técnico Especializado</p>
+          <h2 id="tWorkshopName">CELDON STORE</h2>
+          <p id="tWorkshopNit">NIT: 1121897207-7</p>
+          <p id="tWorkshopInfo">Tel: 310 000 0000 | Centro Técnico Principal</p>
           <div class="ticket-order-bar">
             <strong id="tOrderNumber">ORD-0001</strong>
             <span id="tDate">26/11/2026</span>
