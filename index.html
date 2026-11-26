@@ -1,878 +1,356 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TechService Pro — Gestión de Servicio Técnico de Celulares</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Fuente Inter -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
-                    },
-                    colors: {
-                        slate: {
-                            850: '#172033',
-                            900: '#0f172a',
-                            950: '#090d16',
-                        }
-                    }
-                }
-            }
-        }
-    </script>
-
-    <style>
-        /* Estilos personalizados y utilidades de impresión */
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f1f5f9;
-        }
-
-        /* Estilos para el patrón de desbloqueo de 9 puntos */
-        .pattern-dot {
-            transition: all 0.15s ease;
-        }
-        .pattern-dot.active {
-            background-color: #06b6d4;
-            border-color: #0891b2;
-            transform: scale(1.2);
-            box-shadow: 0 0 0 6px rgba(6, 182, 212, 0.25);
-        }
-
-        /* Estilos específicos para impresión del ticket/comprobante */
-        @media print {
-            body * {
-                visibility: hidden;
-            }
-            #print-area, #print-area * {
-                visibility: visible;
-            }
-            #print-area {
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 100%;
-                margin: 0;
-                padding: 15px;
-                background: white !important;
-                color: black !important;
-                box-shadow: none !important;
-            }
-            .no-print {
-                display: none !important;
-            }
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TechService Pro - Ingreso de Dispositivos Móviles</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
-<body class="text-slate-800 antialiased min-h-screen flex flex-col">
+<body>
 
-    <!-- Notificación Toast Flotante -->
-    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
-
-    <!-- Barra Superior de Navegación (Header SaaS) -->
-    <header class="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-30 shadow-md no-print">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex flex-wrap items-center justify-between h-auto py-3 md:h-16 md:py-0 gap-3">
-                <!-- Logo y Nombre del Taller -->
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-cyan-400 flex items-center justify-center shadow-lg shadow-cyan-500/20 shrink-0">
-                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
-                        </svg>
-                    </div>
-                    <div>
-                        <div class="flex items-center gap-2">
-                            <h1 id="header-shop-name" class="font-bold text-lg tracking-tight text-white">TechFix Mobile Lab</h1>
-                            <span class="hidden sm:inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
-                                Technical App
-                            </span>
-                        </div>
-                        <p id="header-shop-sub" class="text-xs text-slate-400">Gestión de Órdenes y Servicio Técnico</p>
-                    </div>
-                </div>
-
-                <!-- Botones de Navegación y Acciones Rápidas -->
-                <div class="flex items-center gap-2 sm:gap-3 w-full md:w-auto justify-end">
-                    <button onclick="switchView('orders')" id="nav-orders" class="flex-1 md:flex-none inline-flex items-center justify-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium bg-slate-800 text-white border border-slate-700 hover:bg-slate-700 transition">
-                        <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
-                        </svg>
-                        <span>Órdenes</span>
-                    </button>
-
-                    <button onclick="openNewOrderForm()" id="nav-new" class="flex-1 md:flex-none inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white shadow-md shadow-blue-600/25 transition">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path>
-                        </svg>
-                        <span>Nuevo Ingreso</span>
-                    </button>
-
-                    <button onclick="openSettingsModal()" title="Configuración del Taller y Respaldo" class="p-2 rounded-lg bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 border border-slate-700 transition">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                        </svg>
-                    </button>
-                </div>
-            </div>
+  <!-- Barra de Navegación -->
+  <header class="navbar no-print">
+    <div class="container nav-content">
+      <div class="brand">
+        <div class="brand-icon">📱</div>
+        <div>
+          <h1 id="headerWorkshopName">TechService Pro</h1>
+          <span class="brand-sub">Sistema de Gestión Técnica de Celulares</span>
         </div>
-    </header>
+      </div>
 
-    <!-- Contenido Principal -->
-    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 no-print">
-
-        <!-- Dashboard Superior: Métricas Clave -->
-        <section id="dashboard-stats" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <!-- Card 1: Equipos en Taller -->
-            <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm flex items-center justify-between">
-                <div>
-                    <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Equipos en Taller</p>
-                    <p id="stat-in-shop" class="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1">0</p>
-                    <p class="text-xs text-slate-400 mt-1">Activos sin entregar</p>
-                </div>
-                <div class="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
-                    </svg>
-                </div>
-            </div>
-
-            <!-- Card 2: Listos para Entrega -->
-            <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm flex items-center justify-between">
-                <div>
-                    <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Listos para Entrega</p>
-                    <p id="stat-ready" class="text-2xl sm:text-3xl font-extrabold text-emerald-600 mt-1">0</p>
-                    <p class="text-xs text-slate-400 mt-1">Esperando al cliente</p>
-                </div>
-                <div class="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                </div>
-            </div>
-
-            <!-- Card 3: Ingresos Estimados Totales -->
-            <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm flex items-center justify-between">
-                <div>
-                    <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Ingresos Estimados</p>
-                    <p id="stat-total-revenue" class="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1">$0</p>
-                    <p class="text-xs text-slate-400 mt-1">Total facturación órdenes</p>
-                </div>
-                <div class="w-12 h-12 rounded-xl bg-cyan-50 text-cyan-600 flex items-center justify-center shrink-0">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                </div>
-            </div>
-
-            <!-- Card 4: Saldo por Cobrar -->
-            <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm flex items-center justify-between">
-                <div>
-                    <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Saldo por Cobrar</p>
-                    <p id="stat-pending-balance" class="text-2xl sm:text-3xl font-extrabold text-amber-600 mt-1">$0</p>
-                    <p class="text-xs text-slate-400 mt-1">Pendiente de pago</p>
-                </div>
-                <div class="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path>
-                    </svg>
-                </div>
-            </div>
-        </section>
-
-        <!-- VISTA 1: PANEL DE GESTIÓN Y LISTA DE ÓRDENES (TICKETS) -->
-        <section id="view-orders" class="space-y-4">
-            <!-- Barra de Búsqueda y Filtros por Estado -->
-            <div class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-sm space-y-4">
-                <div class="flex flex-col md:flex-row gap-3 justify-between items-stretch md:items-center">
-                    <!-- Input Buscador -->
-                    <div class="relative flex-1">
-                        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                            <svg class="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                            </svg>
-                        </div>
-                        <input type="text" id="search-input" oninput="renderOrders()" placeholder="Buscar por #ORD, cliente, teléfono, marca, modelo o IMEI..." class="block w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:bg-white transition">
-                    </div>
-
-                    <!-- Contador de resultados -->
-                    <div class="flex items-center justify-between md:justify-end gap-3 text-sm text-slate-500">
-                        <span id="orders-count-label" class="font-medium">Mostrando 0 órdenes</span>
-                    </div>
-                </div>
-
-                <!-- Píldoras de Filtro por Estado -->
-                <div class="flex items-center gap-2 overflow-x-auto pb-1" id="status-filters">
-                    <button onclick="setStatusFilter('ALL')" data-filter="ALL" class="filter-btn active px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-900 text-white whitespace-nowrap transition">
-                        Todos
-                    </button>
-                    <button onclick="setStatusFilter('Recibido')" data-filter="Recibido" class="filter-btn px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 whitespace-nowrap transition">
-                        Recibido
-                    </button>
-                    <button onclick="setStatusFilter('En Diagnóstico')" data-filter="En Diagnóstico" class="filter-btn px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 whitespace-nowrap transition">
-                        En Diagnóstico
-                    </button>
-                    <button onclick="setStatusFilter('Esperando Repuesto')" data-filter="Esperando Repuesto" class="filter-btn px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 whitespace-nowrap transition">
-                        Esperando Repuesto
-                    </button>
-                    <button onclick="setStatusFilter('En Reparación')" data-filter="En Reparación" class="filter-btn px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 whitespace-nowrap transition">
-                        En Reparación
-                    </button>
-                    <button onclick="setStatusFilter('Listo para Entrega')" data-filter="Listo para Entrega" class="filter-btn px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 whitespace-nowrap transition">
-                        Listo para Entrega
-                    </button>
-                    <button onclick="setStatusFilter('Entregado')" data-filter="Entregado" class="filter-btn px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 whitespace-nowrap transition">
-                        Entregado
-                    </button>
-                </div>
-            </div>
-
-            <!-- Contenedor de Lista / Grid de Órdenes -->
-            <div id="orders-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <!-- Las tarjetas de órdenes se renderizan dinámicamente aquí -->
-            </div>
-
-            <!-- Estado vacío cuando no hay coincidencias -->
-            <div id="empty-state" class="hidden bg-white rounded-2xl p-12 border border-slate-200 text-center space-y-3">
-                <div class="w-16 h-16 rounded-full bg-slate-100 text-slate-400 mx-auto flex items-center justify-center">
-                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                </div>
-                <h3 class="text-lg font-bold text-slate-800">No se encontraron órdenes</h3>
-                <p class="text-sm text-slate-500 max-w-md mx-auto">No hay equipos registrados con los criterios de búsqueda o filtro seleccionados.</p>
-                <button onclick="openNewOrderForm()" class="mt-2 inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 transition">
-                    + Registrar Nuevo Equipo
-                </button>
-            </div>
-        </section>
-
-        <!-- VISTA 2: FORMULARIO DE INGRESO / EDICIÓN DE EQUIPO -->
-        <section id="view-form" class="hidden">
-            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                <!-- Cabecera del Formulario -->
-                <div class="bg-slate-900 px-6 py-4 flex items-center justify-between text-white">
-                    <div class="flex items-center gap-3">
-                        <button onclick="switchView('orders')" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition" title="Volver a la lista">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-                            </svg>
-                        </button>
-                        <div>
-                            <h2 id="form-title" class="text-lg font-bold">Nueva Orden de Ingreso Técnico</h2>
-                            <p id="form-subtitle" class="text-xs text-slate-400">Complete los datos del cliente, equipo y recepción física</p>
-                        </div>
-                    </div>
-                    <span id="form-order-badge" class="px-3 py-1 rounded-full text-xs font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
-                        #ORD-NUEVA
-                    </span>
-                </div>
-
-                <!-- Cuerpo del Formulario -->
-                <form id="order-form" onsubmit="saveOrder(event)" class="p-6 space-y-8">
-                    <input type="hidden" id="edit-order-id">
-
-                    <!-- SECCIÓN A: DATOS DEL CLIENTE -->
-                    <div class="space-y-4">
-                        <div class="flex items-center gap-2 border-b border-slate-100 pb-2">
-                            <span class="w-7 h-7 rounded-lg bg-blue-100 text-blue-700 font-bold text-xs flex items-center justify-center">1</span>
-                            <h3 class="text-base font-bold text-slate-800">Datos del Cliente</h3>
-                        </div>
-
-                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-600 mb-1">Nombre Completo *</label>
-                                <input type="text" id="client-name" required placeholder="Ej. Carlos Mendoza" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-600 mb-1">Teléfono / WhatsApp *</label>
-                                <input type="tel" id="client-phone" required placeholder="Ej. 3104567890" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-600 mb-1">Documento / Cédula *</label>
-                                <input type="text" id="client-doc" required placeholder="Ej. 1121890456" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-600 mb-1">Correo Electrónico (Opcional)</label>
-                                <input type="email" id="client-email" placeholder="cliente@correo.com" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white">
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- SECCIÓN B: DATOS DEL EQUIPO Y SEGURIDAD -->
-                    <div class="space-y-4">
-                        <div class="flex items-center gap-2 border-b border-slate-100 pb-2">
-                            <span class="w-7 h-7 rounded-lg bg-cyan-100 text-cyan-700 font-bold text-xs flex items-center justify-center">2</span>
-                            <h3 class="text-base font-bold text-slate-800">Datos del Equipo y Acceso</h3>
-                        </div>
-
-                        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                            <!-- Columna Izquierda y Central: Datos técnicos -->
-                            <div class="lg:col-span-2 space-y-4">
-                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div>
-                                        <label class="block text-xs font-semibold text-slate-600 mb-1">Marca *</label>
-                                        <select id="device-brand" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white">
-                                            <option value="Apple">Apple (iPhone)</option>
-                                            <option value="Samsung">Samsung</option>
-                                            <option value="Xiaomi">Xiaomi / Redmi / Poco</option>
-                                            <option value="Motorola">Motorola</option>
-                                            <option value="Huawei">Huawei</option>
-                                            <option value="Realme">Realme</option>
-                                            <option value="Oppo">Oppo / Vivo</option>
-                                            <option value="Otro">Otro</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label class="block text-xs font-semibold text-slate-600 mb-1">Modelo Exacto *</label>
-                                        <input type="text" id="device-model" required placeholder="Ej. iPhone 13 Pro / Galaxy A54" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white">
-                                    </div>
-                                </div>
-
-                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div>
-                                        <label class="block text-xs font-semibold text-slate-600 mb-1">IMEI / Número de Serie *</label>
-                                        <input type="text" id="device-imei" required placeholder="Ej. 354892109482710" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white">
-                                    </div>
-                                    <div>
-                                        <label class="block text-xs font-semibold text-slate-600 mb-1">Color del Equipo *</label>
-                                        <input type="text" id="device-color" required placeholder="Ej. Azul Sierra / Negro Mate" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white">
-                                    </div>
-                                </div>
-
-                                <!-- Accesorios Recibidos -->
-                                <div>
-                                    <label class="block text-xs font-semibold text-slate-600 mb-2">Accesorios Recibidos con el Equipo</label>
-                                    <div class="flex flex-wrap gap-2">
-                                        <label class="cursor-pointer inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-xs font-medium select-none">
-                                            <input type="checkbox" name="accessories" value="Cargador / Cable" class="rounded text-blue-600 focus:ring-blue-500">
-                                            <span>Cargador / Cable</span>
-                                        </label>
-                                        <label class="cursor-pointer inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-xs font-medium select-none">
-                                            <input type="checkbox" name="accessories" value="Funda / Case" class="rounded text-blue-600 focus:ring-blue-500">
-                                            <span>Funda / Case</span>
-                                        </label>
-                                        <label class="cursor-pointer inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-xs font-medium select-none">
-                                            <input type="checkbox" name="accessories" value="Tarjeta SIM" class="rounded text-blue-600 focus:ring-blue-500">
-                                            <span>Tarjeta SIM</span>
-                                        </label>
-                                        <label class="cursor-pointer inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-xs font-medium select-none">
-                                            <input type="checkbox" name="accessories" value="Memoria MicroSD" class="rounded text-blue-600 focus:ring-blue-500">
-                                            <span>Memoria MicroSD</span>
-                                        </label>
-                                        <label class="cursor-pointer inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-xs font-medium select-none">
-                                            <input type="checkbox" name="accessories" value="Caja Original" class="rounded text-blue-600 focus:ring-blue-500">
-                                            <span>Caja Original</span>
-                                        </label>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Columna Derecha: Código / Patrón Visual de 9 Puntos -->
-                            <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col justify-between">
-                                <div>
-                                    <div class="flex items-center justify-between mb-2">
-                                        <label class="text-xs font-bold text-slate-700">Desbloqueo (PIN o Patrón)</label>
-                                        <button type="button" onclick="clearPattern()" class="text-xs text-cyan-600 hover:text-cyan-700 font-semibold">Limpiar patrón</button>
-                                    </div>
-                                    <input type="text" id="device-passcode" placeholder="PIN / Contraseña o toque puntos..." class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-mono mb-3 focus:outline-none focus:ring-2 focus:ring-cyan-500">
-                                </div>
-
-                                <!-- Matriz de Patrón de 9 Puntos -->
-                                <div class="flex flex-col items-center justify-center py-2">
-                                    <div class="relative w-36 h-36 bg-slate-900 rounded-2xl p-4 shadow-inner flex items-center justify-center">
-                                        <svg id="pattern-svg" class="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 144 144"></svg>
-                                        <div class="grid grid-cols-3 gap-7 z-10" id="pattern-grid">
-                                            <button type="button" data-dot="1" onclick="togglePatternDot(1)" class="pattern-dot w-4 h-4 rounded-full bg-slate-600 border-2 border-slate-400 focus:outline-none"></button>
-                                            <button type="button" data-dot="2" onclick="togglePatternDot(2)" class="pattern-dot w-4 h-4 rounded-full bg-slate-600 border-2 border-slate-400 focus:outline-none"></button>
-                                            <button type="button" data-dot="3" onclick="togglePatternDot(3)" class="pattern-dot w-4 h-4 rounded-full bg-slate-600 border-2 border-slate-400 focus:outline-none"></button>
-                                            <button type="button" data-dot="4" onclick="togglePatternDot(4)" class="pattern-dot w-4 h-4 rounded-full bg-slate-600 border-2 border-slate-400 focus:outline-none"></button>
-                                            <button type="button" data-dot="5" onclick="togglePatternDot(5)" class="pattern-dot w-4 h-4 rounded-full bg-slate-600 border-2 border-slate-400 focus:outline-none"></button>
-                                            <button type="button" data-dot="6" onclick="togglePatternDot(6)" class="pattern-dot w-4 h-4 rounded-full bg-slate-600 border-2 border-slate-400 focus:outline-none"></button>
-                                            <button type="button" data-dot="7" onclick="togglePatternDot(7)" class="pattern-dot w-4 h-4 rounded-full bg-slate-600 border-2 border-slate-400 focus:outline-none"></button>
-                                            <button type="button" data-dot="8" onclick="togglePatternDot(8)" class="pattern-dot w-4 h-4 rounded-full bg-slate-600 border-2 border-slate-400 focus:outline-none"></button>
-                                            <button type="button" data-dot="9" onclick="togglePatternDot(9)" class="pattern-dot w-4 h-4 rounded-full bg-slate-600 border-2 border-slate-400 focus:outline-none"></button>
-                                        </div>
-                                    </div>
-                                    <p id="pattern-display-text" class="text-[11px] text-slate-500 mt-2 font-mono">Secuencia: Sin patrón</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- SECCIÓN C: CHECKLIST DE RECEPCIÓN Y DIAGNÓSTICO -->
-                    <div class="space-y-4">
-                        <div class="flex items-center gap-2 border-b border-slate-100 pb-2">
-                            <span class="w-7 h-7 rounded-lg bg-amber-100 text-amber-700 font-bold text-xs flex items-center justify-center">3</span>
-                            <h3 class="text-base font-bold text-slate-800">Checklist Físico, Funcional y Diagnóstico</h3>
-                        </div>
-
-                        <!-- Checklist Grid -->
-                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                            <label class="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-slate-50 cursor-pointer hover:bg-slate-100">
-                                <span class="text-xs font-medium text-slate-700">Pantalla Rota/Rayada</span>
-                                <input type="checkbox" id="chk-screen" class="w-4 h-4 rounded text-amber-600 focus:ring-amber-500">
-                            </label>
-                            <label class="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-slate-50 cursor-pointer hover:bg-slate-100">
-                                <span class="text-xs font-medium text-slate-700">Tapa Trasera Rota</span>
-                                <input type="checkbox" id="chk-back" class="w-4 h-4 rounded text-amber-600 focus:ring-amber-500">
-                            </label>
-                            <label class="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-slate-50 cursor-pointer hover:bg-slate-100">
-                                <span class="text-xs font-medium text-slate-700">Equipo Enciende</span>
-                                <input type="checkbox" id="chk-power" checked class="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500">
-                            </label>
-                            <label class="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-slate-50 cursor-pointer hover:bg-slate-100">
-                                <span class="text-xs font-medium text-slate-700">Recibe Carga</span>
-                                <input type="checkbox" id="chk-charge" checked class="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500">
-                            </label>
-                            <label class="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-slate-50 cursor-pointer hover:bg-slate-100">
-                                <span class="text-xs font-medium text-slate-700">Cámaras OK</span>
-                                <input type="checkbox" id="chk-camera" checked class="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500">
-                            </label>
-                            <label class="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-slate-50 cursor-pointer hover:bg-slate-100">
-                                <span class="text-xs font-medium text-slate-700">Botones OK</span>
-                                <input type="checkbox" id="chk-buttons" checked class="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500">
-                            </label>
-                            <label class="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-slate-50 cursor-pointer hover:bg-slate-100">
-                                <span class="text-xs font-medium text-slate-700">Micrófono/Altavoz OK</span>
-                                <input type="checkbox" id="chk-audio" checked class="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500">
-                            </label>
-                            <label class="flex items-center justify-between p-3 rounded-xl border border-red-200 bg-red-50/60 cursor-pointer hover:bg-red-50">
-                                <span class="text-xs font-semibold text-red-700">Mojado / Humedad</span>
-                                <input type="checkbox" id="chk-water" class="w-4 h-4 rounded text-red-600 focus:ring-red-500">
-                            </label>
-                        </div>
-
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-600 mb-1">Falla Reportada / Diagnóstico Inicial *</label>
-                                <textarea id="device-issue" rows="3" required placeholder="Describa el problema reportado por el cliente y las observaciones iniciales del técnico..." class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"></textarea>
-                            </div>
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-600 mb-1">Notas Estéticas Adicionales</label>
-                                <textarea id="device-notes" rows="3" placeholder="Ej. Golpe en esquina superior derecha, sin bandeja SIM, protector de pantalla quebrado..." class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"></textarea>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- SECCIÓN D: PRESUPUESTO Y ASIGNACIÓN -->
-                    <div class="space-y-4">
-                        <div class="flex items-center gap-2 border-b border-slate-100 pb-2">
-                            <span class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 font-bold text-xs flex items-center justify-center">4</span>
-                            <h3 class="text-base font-bold text-slate-800">Presupuesto, Entrega y Estado</h3>
-                        </div>
-
-                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-600 mb-1">Costo Estimado ($) *</label>
-                                <input type="number" id="cost-total" min="0" step="any" required value="0" oninput="calculateBalance()" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-600 mb-1">Abono / Anticipo ($)</label>
-                                <input type="number" id="cost-deposit" min="0" step="any" value="0" oninput="calculateBalance()" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-600 mb-1">Saldo Pendiente ($)</label>
-                                <input type="text" id="cost-balance" readonly value="$0" class="w-full px-3.5 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-sm font-extrabold text-amber-700 cursor-not-allowed">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-600 mb-1">Fecha Estimada Entrega</label>
-                                <input type="date" id="delivery-date" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-600 mb-1">Técnico Asignado</label>
-                                <input type="text" id="assigned-tech" placeholder="Ej. Andrés R." class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white">
-                            </div>
-                        </div>
-
-                        <div class="max-w-xs">
-                            <label class="block text-xs font-semibold text-slate-600 mb-1">Estado Inicial de la Orden</label>
-                            <select id="order-status" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                <option value="Recibido">Recibido</option>
-                                <option value="En Diagnóstico">En Diagnóstico</option>
-                                <option value="Esperando Repuesto">Esperando Repuesto</option>
-                                <option value="En Reparación">En Reparación</option>
-                                <option value="Listo para Entrega">Listo para Entrega</option>
-                                <option value="Entregado">Entregado</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <!-- Botones de Acción del Formulario -->
-                    <div class="flex flex-col sm:flex-row items-center justify-end gap-3 pt-4 border-t border-slate-200">
-                        <button type="button" onclick="switchView('orders')" class="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 font-semibold text-sm hover:bg-slate-50 transition">
-                            Cancelar
-                        </button>
-                        <button type="submit" class="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white font-bold text-sm shadow-lg shadow-blue-600/25 transition">
-                            Guardar Orden de Servicio
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </section>
-    </main>
-
-    <!-- MODAL: DETALLE Y COMPROBANTE DE INGRESO IMPRIMIBLE -->
-    <div id="ticket-modal" class="fixed inset-0 z-50 hidden bg-slate-900/70 backdrop-blur-sm overflow-y-auto p-4 flex items-start sm:items-center justify-center">
-        <div class="bg-white rounded-2xl max-w-2xl w-full shadow-2xl overflow-hidden my-4">
-            <!-- Barra superior del modal (No se imprime) -->
-            <div class="bg-slate-900 px-5 py-3.5 flex items-center justify-between text-white no-print">
-                <div class="flex items-center gap-2">
-                    <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                    </svg>
-                    <span class="font-bold text-sm">Comprobante de Ingreso Técnico</span>
-                </div>
-                <div class="flex items-center gap-2">
-                    <button onclick="window.print()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs transition">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
-                        </svg>
-                        Imprimir Recibo
-                    </button>
-                    <button onclick="closeTicketModal()" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                        </svg>
-                    </button>
-                </div>
-            </div>
-
-            <!-- ÁREA IMPRIMIBLE DEL TICKET -->
-            <div id="print-area" class="p-6 sm:p-8 bg-white text-slate-800 text-sm space-y-5">
-                <!-- Encabezado del Taller -->
-                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b-2 border-slate-900 pb-4 gap-3">
-                    <div>
-                        <h2 id="tkt-shop-name" class="text-xl font-extrabold text-slate-900 uppercase tracking-tight">TechFix Mobile Lab</h2>
-                        <p id="tkt-shop-address" class="text-xs text-slate-600">Calle Principal #45-12, Local 102</p>
-                        <p id="tkt-shop-phone" class="text-xs text-slate-600">Tel / WhatsApp: +57 300 123 4567</p>
-                    </div>
-                    <div class="sm:text-right bg-slate-100 px-4 py-2 rounded-xl border border-slate-200">
-                        <p class="text-[11px] font-bold uppercase text-slate-500">Orden de Servicio</p>
-                        <p id="tkt-order-number" class="text-lg font-extrabold text-slate-900 font-mono">#ORD-001</p>
-                        <p id="tkt-date" class="text-xs text-slate-500">Fecha: 26/11/2026</p>
-                    </div>
-                </div>
-
-                <!-- Datos Cliente y Equipo en 2 columnas -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
-                        <p class="text-xs font-bold uppercase text-slate-400 tracking-wider">Datos del Cliente</p>
-                        <p class="font-bold text-slate-900" id="tkt-client-name">Nombre Cliente</p>
-                        <p class="text-xs text-slate-600">Doc/ID: <span id="tkt-client-doc" class="font-medium text-slate-800"></span></p>
-                        <p class="text-xs text-slate-600">Tel/WA: <span id="tkt-client-phone" class="font-medium text-slate-800"></span></p>
-                        <p class="text-xs text-slate-600" id="tkt-client-email-row">Email: <span id="tkt-client-email" class="font-medium text-slate-800"></span></p>
-                    </div>
-
-                    <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
-                        <p class="text-xs font-bold uppercase text-slate-400 tracking-wider">Datos del Dispositivo</p>
-                        <p class="font-bold text-slate-900"><span id="tkt-device-brand"></span> <span id="tkt-device-model"></span></p>
-                        <p class="text-xs text-slate-600">IMEI/SN: <span id="tkt-device-imei" class="font-mono font-semibold text-slate-800"></span></p>
-                        <p class="text-xs text-slate-600">Color: <span id="tkt-device-color" class="font-medium text-slate-800"></span></p>
-                        <p class="text-xs text-slate-600">Clave/Patrón: <span id="tkt-device-pass" class="font-mono font-bold text-slate-900 bg-slate-200 px-1.5 py-0.5 rounded"></span></p>
-                    </div>
-                </div>
-
-                <!-- Estado de Recepción y Accesorios -->
-                <div class="border border-slate-200 rounded-xl p-3.5 space-y-2">
-                    <p class="text-xs font-bold uppercase text-slate-400 tracking-wider">Inspección de Recepción y Accesorios</p>
-                    <div id="tkt-checklist" class="flex flex-wrap gap-1.5 text-xs"></div>
-                    <p class="text-xs text-slate-600 pt-1"><strong>Accesorios entregados:</strong> <span id="tkt-accessories">Ninguno</span></p>
-                    <p class="text-xs text-slate-600"><strong>Notas estéticas:</strong> <span id="tkt-notes">Sin observaciones</span></p>
-                </div>
-
-                <!-- Falla Reportada -->
-                <div class="border border-slate-200 rounded-xl p-3.5 space-y-1">
-                    <p class="text-xs font-bold uppercase text-slate-400 tracking-wider">Falla Reportada / Trabajo a Realizar</p>
-                    <p id="tkt-issue" class="text-sm font-medium text-slate-800"></p>
-                </div>
-
-                <!-- Resumen Financiero y Entrega -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center bg-slate-900 text-white p-4 rounded-xl">
-                    <div class="space-y-1 text-xs">
-                        <p class="text-slate-400">Estado Actual: <span id="tkt-status" class="font-bold text-cyan-400">Recibido</span></p>
-                        <p class="text-slate-400">Técnico Asignado: <span id="tkt-tech" class="font-semibold text-white">Por asignar</span></p>
-                        <p class="text-slate-400">Entrega Estimada: <span id="tkt-delivery" class="font-semibold text-white">Por definir</span></p>
-                    </div>
-                    <div class="sm:text-right space-y-1 border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-700">
-                        <p class="text-xs text-slate-300">Total Estimado: <span id="tkt-total" class="font-bold text-white">$0</span></p>
-                        <p class="text-xs text-emerald-400">Abono / Anticipo: <span id="tkt-deposit" class="font-bold">$0</span></p>
-                        <p class="text-base font-extrabold text-amber-400">Saldo Pendiente: <span id="tkt-balance">$0</span></p>
-                    </div>
-                </div>
-
-                <!-- Cláusula de Garantía y Firmas -->
-                <div class="pt-2 space-y-6">
-                    <p id="tkt-warranty-text" class="text-[11px] text-slate-500 leading-relaxed text-justify border-t border-slate-200 pt-3">
-                        Términos y condiciones: El taller no se hace responsable por pérdida de información, tarjetas SIM o memorias no reportadas en este comprobante. Equipos mojados o apagados ingresan sin garantía de encendido. Toda reparación tiene 30 días de garantía sobre el repuesto instalado (no cubre golpes ni humedad). Pasados 30 días sin retirar el equipo, el taller no se hace responsable.
-                    </p>
-
-                    <div class="grid grid-cols-2 gap-8 pt-6 text-center text-xs text-slate-600">
-                        <div class="border-t border-slate-400 pt-1.5">Firma del Cliente (Acepto condiciones)</div>
-                        <div class="border-t border-slate-400 pt-1.5">Firma / Sello del Taller</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Acciones Inferiores del Modal (No se imprimen) -->
-            <div class="bg-slate-50 px-6 py-3.5 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2 no-print">
-                <button id="tkt-whatsapp-btn" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-sm transition">
-                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86s.274.072.376-.043c.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.1.824z"/>
-                    </svg>
-                    Enviar Comprobante por WhatsApp
-                </button>
-                <div class="flex items-center gap-2">
-                    <button id="tkt-edit-btn" class="px-4 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 font-semibold text-xs transition">
-                        Editar Orden
-                    </button>
-                    <button onclick="closeTicketModal()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-semibold text-xs transition">
-                        Cerrar
-                    </button>
-                </div>
-            </div>
-        </div>
+      <nav class="nav-tabs">
+        <button class="tab-btn active" data-tab="panel">📋 Panel de Órdenes</button>
+        <button class="tab-btn" data-tab="nuevo">➕ Nuevo Ingreso</button>
+        <button class="tab-btn" data-tab="config">⚙️ Taller y Respaldo</button>
+      </nav>
     </div>
+  </header>
 
-    <!-- MODAL: CONFIGURACIÓN DEL TALLER Y RESPALDO -->
-    <div id="settings-modal" class="fixed inset-0 z-50 hidden bg-slate-900/70 backdrop-blur-sm overflow-y-auto p-4 flex items-center justify-center">
-        <div class="bg-white rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden">
-            <div class="bg-slate-900 px-6 py-4 flex items-center justify-between text-white">
-                <h3 class="font-bold text-base">Configuración del Taller y Respaldo</h3>
-                <button onclick="closeSettingsModal()" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                    </svg>
-                </button>
-            </div>
+  <main class="container main-content">
 
-            <form onsubmit="saveSettings(event)" class="p-6 space-y-4">
-                <div>
-                    <label class="block text-xs font-semibold text-slate-600 mb-1">Nombre del Taller / Local *</label>
-                    <input type="text" id="cfg-shop-name" required class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                </div>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">Teléfono / WhatsApp del Taller</label>
-                        <input type="text" id="cfg-shop-phone" class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">Dirección Física</label>
-                        <input type="text" id="cfg-shop-address" class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-600 mb-1">Términos y Garantía en el Ticket</label>
-                    <textarea id="cfg-shop-warranty" rows="3" class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
-                </div>
-
-                <!-- Sección de Exportar / Importar Respaldo JSON -->
-                <div class="pt-3 border-t border-slate-200 space-y-2">
-                    <p class="text-xs font-bold text-slate-700">Copia de Seguridad de Base de Datos (JSON)</p>
-                    <div class="flex flex-wrap gap-2">
-                        <button type="button" onclick="exportDataJSON()" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold text-xs transition">
-                            <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
-                            </svg>
-                            Exportar Respaldo (.json)
-                        </button>
-                        <label class="cursor-pointer inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold text-xs transition">
-                            <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
-                            </svg>
-                            Importar Respaldo
-                            <input type="file" accept=".json" onchange="importDataJSON(event)" class="hidden">
-                        </label>
-                    </div>
-                </div>
-
-                <div class="flex justify-end gap-2 pt-4 border-t border-slate-200">
-                    <button type="button" onclick="closeSettingsModal()" class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 font-semibold text-xs hover:bg-slate-50">Cancelar</button>
-                    <button type="submit" class="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-sm">Guardar Configuración</button>
-                </div>
-            </form>
+    <!-- VISTA 1: PANEL DE ÓRDENES -->
+    <section id="tab-panel" class="tab-view active">
+      <!-- KPIs -->
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <span class="kpi-label">Total Órdenes</span>
+          <strong class="kpi-value" id="kpiTotal">0</strong>
         </div>
-    </div>
-
-    <!-- MODAL DE CONFIRMACIÓN PERSONALIZADO (Sin usar confirm() nativo) -->
-    <div id="confirm-modal" class="fixed inset-0 z-50 hidden bg-slate-900/70 backdrop-blur-sm p-4 flex items-center justify-center">
-        <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl space-y-4">
-            <div class="flex items-center gap-3 text-red-600">
-                <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
-                    </svg>
-                </div>
-                <h4 class="font-bold text-slate-900 text-base">Eliminar Orden de Servicio</h4>
-            </div>
-            <p id="confirm-modal-text" class="text-sm text-slate-600">¿Estás seguro de eliminar permanentemente esta orden?</p>
-            <div class="flex justify-end gap-2 pt-2">
-                <button onclick="closeConfirmModal()" class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 font-semibold text-xs hover:bg-slate-50">Cancelar</button>
-                <button id="confirm-delete-btn" class="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs">Sí, Eliminar</button>
-            </div>
+        <div class="kpi-card kpi-blue">
+          <span class="kpi-label">En Taller / Proceso</span>
+          <strong class="kpi-value" id="kpiProceso">0</strong>
         </div>
+        <div class="kpi-card kpi-green">
+          <span class="kpi-label">Listos para Entrega</span>
+          <strong class="kpi-value" id="kpiListos">0</strong>
+        </div>
+        <div class="kpi-card kpi-amber">
+          <span class="kpi-label">Saldo por Cobrar</span>
+          <strong class="kpi-value" id="kpiSaldo">$0</strong>
+        </div>
+      </div>
+
+      <!-- Barra de búsqueda y filtros -->
+      <div class="toolbar card">
+        <div class="search-box">
+          <input type="text" id="searchInput" placeholder="Buscar por # orden, cliente, modelo, IMEI o teléfono...">
+        </div>
+        <div class="filter-pills" id="statusFilters">
+          <button class="pill active" data-filter="Todos">Todos</button>
+          <button class="pill" data-filter="Recibido">Recibido</button>
+          <button class="pill" data-filter="En Diagnóstico">En Diagnóstico</button>
+          <button class="pill" data-filter="En Reparación">En Reparación</button>
+          <button class="pill" data-filter="Listo para Entrega">Listo</button>
+          <button class="pill" data-filter="Entregado">Entregado</button>
+        </div>
+      </div>
+
+      <!-- Lista de órdenes -->
+      <div id="ordersList" class="orders-grid"></div>
+    </section>
+
+    <!-- VISTA 2: FORMULARIO DE NUEVO INGRESO -->
+    <section id="tab-nuevo" class="tab-view">
+      <form id="intakeForm" class="intake-form">
+        <div class="form-header">
+          <div>
+            <h2>Nueva Orden de Servicio Técnico</h2>
+            <p class="text-muted">Registra los datos del cliente, estado físico del equipo y presupuesto inicial.</p>
+          </div>
+          <span class="order-badge-preview" id="nextOrderBadge">ORD-0001</span>
+        </div>
+
+        <div class="form-grid">
+          <!-- Columna Izquierda -->
+          <div class="form-col">
+            <!-- Datos del Cliente -->
+            <div class="card">
+              <h3 class="card-title">👤 1. Datos del Cliente</h3>
+              <div class="input-group">
+                <label>Nombre completo *</label>
+                <input type="text" id="clientName" required placeholder="Ej. Carlos Mendoza">
+              </div>
+              <div class="row-2">
+                <div class="input-group">
+                  <label>Teléfono / WhatsApp *</label>
+                  <input type="tel" id="clientPhone" required placeholder="Ej. 3104567890">
+                </div>
+                <div class="input-group">
+                  <label>Documento / Cédula</label>
+                  <input type="text" id="clientDoc" placeholder="Opcional">
+                </div>
+              </div>
+            </div>
+
+            <!-- Datos del Dispositivo -->
+            <div class="card">
+              <h3 class="card-title">📱 2. Información del Equipo</h3>
+              <div class="row-2">
+                <div class="input-group">
+                  <label>Marca *</label>
+                  <select id="deviceBrand" required>
+                    <option value="">Seleccionar...</option>
+                    <option value="Samsung">Samsung</option>
+                    <option value="Apple iPhone">Apple iPhone</option>
+                    <option value="Xiaomi / Redmi / Poco">Xiaomi / Redmi / Poco</option>
+                    <option value="Motorola">Motorola</option>
+                    <option value="Tecno">Tecno</option>
+                    <option value="Infinix">Infinix</option>
+                    <option value="Huawei / Honor">Huawei / Honor</option>
+                    <option value="Realme / Oppo">Realme / Oppo</option>
+                    <option value="Otra">Otra marca</option>
+                  </select>
+                </div>
+                <div class="input-group">
+                  <label>Modelo exacto *</label>
+                  <input type="text" id="deviceModel" required placeholder="Ej. Galaxy A54 / iPhone 13">
+                </div>
+              </div>
+              <div class="row-2">
+                <div class="input-group">
+                  <label>IMEI / Serie (15 dígitos)</label>
+                  <input type="text" id="deviceImei" maxlength="20" placeholder="Marcar *#06#">
+                </div>
+                <div class="input-group">
+                  <label>Color / Capacidad</label>
+                  <input type="text" id="deviceColor" placeholder="Ej. Negro 128GB">
+                </div>
+              </div>
+
+              <!-- Seguridad y Patrón -->
+              <div class="security-box">
+                <div class="input-group">
+                  <label>PIN / Contraseña de pantalla</label>
+                  <input type="text" id="devicePin" placeholder="Ej. 123456 o Sin clave">
+                </div>
+                <div class="pattern-wrapper">
+                  <label>Patrón de desbloqueo (toca o arrastra)</label>
+                  <div class="pattern-container">
+                    <div id="patternPad" class="pattern-pad">
+                      <svg id="patternLines" viewBox="0 0 180 180"></svg>
+                      <div class="pattern-dot" data-dot="1"><span>1</span></div>
+                      <div class="pattern-dot" data-dot="2"><span>2</span></div>
+                      <div class="pattern-dot" data-dot="3"><span>3</span></div>
+                      <div class="pattern-dot" data-dot="4"><span>4</span></div>
+                      <div class="pattern-dot" data-dot="5"><span>5</span></div>
+                      <div class="pattern-dot" data-dot="6"><span>6</span></div>
+                      <div class="pattern-dot" data-dot="7"><span>7</span></div>
+                      <div class="pattern-dot" data-dot="8"><span>8</span></div>
+                      <div class="pattern-dot" data-dot="9"><span>9</span></div>
+                    </div>
+                    <div class="pattern-info">
+                      <span class="pattern-seq">Secuencia: <strong id="patternDisplay">Ninguna</strong></span>
+                      <button type="button" id="clearPatternBtn" class="btn-small">Limpiar patrón</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Columna Derecha -->
+          <div class="form-col">
+            <!-- Estado Físico y Checklist -->
+            <div class="card">
+              <h3 class="card-title">🔍 3. Inspección Física y Accesorios</h3>
+              <label class="sub-label">Condición al recibir:</label>
+              <div class="checklist-grid" id="conditionChecklist">
+                <label class="check-chip"><input type="checkbox" value="Enciende"> Enciende</label>
+                <label class="check-chip"><input type="checkbox" value="Pantalla rota/fisurada"> Pantalla rota</label>
+                <label class="check-chip"><input type="checkbox" value="Tapa trasera rota"> Tapa rota</label>
+                <label class="check-chip"><input type="checkbox" value="Rayones de uso"> Rayones de uso</label>
+                <label class="check-chip"><input type="checkbox" value="Equipo mojado/humedad"> Mojado / Humedad</label>
+                <label class="check-chip"><input type="checkbox" value="No carga"> No carga</label>
+                <label class="check-chip"><input type="checkbox" value="Sin imagen (Blackout)"> Sin imagen</label>
+                <label class="check-chip"><input type="checkbox" value="Previamente intervenido"> Ya destapado</label>
+              </div>
+
+              <label class="sub-label" style="margin-top: 14px;">Accesorios dejados en taller:</label>
+              <div class="checklist-grid" id="accessoriesChecklist">
+                <label class="check-chip"><input type="checkbox" value="Tarjeta SIM"> Tarjeta SIM</label>
+                <label class="check-chip"><input type="checkbox" value="Porta SIM"> Porta SIM</label>
+                <label class="check-chip"><input type="checkbox" value="Memoria MicroSD"> MicroSD</label>
+                <label class="check-chip"><input type="checkbox" value="Funda / Estuche"> Funda / Case</label>
+                <label class="check-chip"><input type="checkbox" value="Cargador / Cable"> Cargador</label>
+                <label class="check-chip"><input type="checkbox" value="Ninguno (Solo equipo)"> Ninguno</label>
+              </div>
+            </div>
+
+            <!-- Falla y Presupuesto -->
+            <div class="card">
+              <h3 class="card-title">🛠️ 4. Diagnóstico y Costos</h3>
+              <div class="input-group">
+                <label>Falla reportada por el cliente *</label>
+                <textarea id="reportedIssue" rows="2" required placeholder="Describe el problema principal (ej. Cambio de módulo display, no sube carga, mantenimiento por humedad...)"></textarea>
+              </div>
+              <div class="input-group">
+                <label>Observaciones técnicas / Riesgos</label>
+                <input type="text" id="techNotes" placeholder="Ej. Ingresa apagado, no se pudo probar cámaras ni táctil">
+              </div>
+
+              <div class="row-3">
+                <div class="input-group">
+                  <label>Costo Total ($)</label>
+                  <input type="number" id="totalCost" min="0" step="any" value="0">
+                </div>
+                <div class="input-group">
+                  <label>Abono / Adelanto ($)</label>
+                  <input type="number" id="advancePay" min="0" step="any" value="0">
+                </div>
+                <div class="input-group">
+                  <label>Saldo Pendiente</label>
+                  <input type="text" id="balanceDisplay" readonly value="$0" class="readonly-money">
+                </div>
+              </div>
+
+              <div class="row-2">
+                <div class="input-group">
+                  <label>Estado inicial</label>
+                  <select id="initialStatus">
+                    <option value="Recibido">Recibido</option>
+                    <option value="En Diagnóstico">En Diagnóstico</option>
+                    <option value="En Reparación">En Reparación</option>
+                  </select>
+                </div>
+                <div class="input-group">
+                  <label>Fecha estimada entrega</label>
+                  <input type="date" id="deliveryDate">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" id="resetFormBtn" class="btn-secondary">Limpiar Campos</button>
+          <button type="submit" class="btn-primary">💾 Guardar Orden y Ver Ticket</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- VISTA 3: CONFIGURACIÓN Y RESPALDO -->
+    <section id="tab-config" class="tab-view">
+      <div class="config-grid">
+        <div class="card">
+          <h3 class="card-title">🏪 Datos del Taller (Aparecen en el Ticket)</h3>
+          <form id="settingsForm">
+            <div class="input-group">
+              <label>Nombre del Servicio Técnico</label>
+              <input type="text" id="cfgWorkshopName" required>
+            </div>
+            <div class="input-group">
+              <label>Teléfono / WhatsApp del Taller</label>
+              <input type="text" id="cfgWorkshopPhone">
+            </div>
+            <div class="input-group">
+              <label>Dirección física</label>
+              <input type="text" id="cfgWorkshopAddress">
+            </div>
+            <div class="input-group">
+              <label>Políticas de garantía y condiciones (Pie de ticket)</label>
+              <textarea id="cfgWorkshopTerms" rows="4"></textarea>
+            </div>
+            <button type="submit" class="btn-primary">Guardar Configuración</button>
+          </form>
+        </div>
+
+        <div class="card">
+          <h3 class="card-title">💾 Copia de Seguridad (Base de Datos Local)</h3>
+          <p class="text-muted">Tus órdenes se guardan automáticamente en este navegador. Exporta un respaldo periódicamente para no perder información.</p>
+          <div class="backup-actions">
+            <button type="button" id="exportDataBtn" class="btn-secondary">⬇️ Exportar Respaldo (.JSON)</button>
+            <label class="btn-secondary file-label">
+              ⬆️ Importar Respaldo (.JSON)
+              <input type="file" id="importDataInput" accept=".json" hidden>
+            </label>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- MODAL DE TICKET / COMPROBANTE DE INGRESO -->
+  <div id="ticketModal" class="modal hidden">
+    <div class="modal-backdrop" id="closeModalBackdrop"></div>
+    <div class="modal-dialog">
+      <div class="modal-toolbar no-print">
+        <h3>Comprobante de Ingreso</h3>
+        <div class="modal-btns">
+          <button type="button" id="whatsappBtn" class="btn-whatsapp">💬 Enviar WhatsApp</button>
+          <button type="button" id="printTicketBtn" class="btn-primary">🖨️ Imprimir Ticket</button>
+          <button type="button" id="closeModalBtn" class="btn-close">✕</button>
+        </div>
+      </div>
+
+      <!-- Área Imprimible -->
+      <div id="printableTicket" class="ticket-sheet">
+        <div class="ticket-header">
+          <h2 id="tWorkshopName">TechService Pro</h2>
+          <p id="tWorkshopInfo">Tel: 300 000 0000 | Servicio Técnico Especializado</p>
+          <div class="ticket-order-bar">
+            <strong id="tOrderNumber">ORD-0001</strong>
+            <span id="tDate">26/11/2026</span>
+          </div>
+        </div>
+
+        <div class="ticket-section">
+          <h4>DATOS DEL CLIENTE</h4>
+          <p><strong>Cliente:</strong> <span id="tClientName"></span></p>
+          <p><strong>Teléfono:</strong> <span id="tClientPhone"></span> <span id="tClientDoc"></span></p>
+        </div>
+
+        <div class="ticket-section">
+          <h4>EQUIPO INGRESADO</h4>
+          <p><strong>Dispositivo:</strong> <span id="tDevice"></span></p>
+          <p><strong>IMEI / Serie:</strong> <span id="tImei"></span></p>
+          <p><strong>Seguridad:</strong> <span id="tSecurity"></span></p>
+          <p><strong>Estado físico:</strong> <span id="tConditions"></span></p>
+          <p><strong>Accesorios:</strong> <span id="tAccessories"></span></p>
+        </div>
+
+        <div class="ticket-section">
+          <h4>FALLA REPORTADA Y OBSERVACIONES</h4>
+          <p id="tIssue" class="ticket-issue-text"></p>
+          <p id="tNotes" class="ticket-notes-text"></p>
+        </div>
+
+        <div class="ticket-finance">
+          <div><span>Total Estimado:</span> <strong id="tTotal">$0</strong></div>
+          <div><span>Abono:</span> <strong id="tAdvance">$0</strong></div>
+          <div class="ticket-balance"><span>SALDO PENDIENTE:</span> <strong id="tBalance">$0</strong></div>
+        </div>
+
+        <div class="ticket-terms" id="tTerms"></div>
+
+        <div class="ticket-signatures">
+          <div class="sig-line">Firma del Cliente</div>
+          <div class="sig-line">Recibido por Taller</div>
+        </div>
+      </div>
     </div>
+  </div>
 
-    <!-- LÓGICA DE APLICACIÓN -->
-    <script>
-        // Claves de almacenamiento local
-        const STORAGE_ORDERS_KEY = 'techservice_orders_v1';
-        const STORAGE_SETTINGS_KEY = 'techservice_settings_v1';
-
-        // Estado global de la aplicación
-        let orders = [];
-        let settings = {
-            shopName: 'TechFix Mobile Lab',
-            shopPhone: '+57 312 456 7890',
-            shopAddress: 'Centro Comercial Tecnológico, Local 204',
-            warrantyText: 'Términos y condiciones: El taller no se hace responsable por pérdida de información, tarjetas SIM o memorias no reportadas en este comprobante. Equipos mojados o apagados ingresan sin garantía de encendido. Toda reparación tiene 30 días de garantía sobre el repuesto instalado (no cubre golpes ni humedad). Pasados 30 días sin retirar el equipo, el taller no se hace responsable.'
-        };
-        let currentFilter = 'ALL';
-        let currentPattern = [];
-
-        // Coordenadas centrales de los 9 puntos en el SVG de 144x144
-        const DOT_COORDS = {
-            1: { x: 24, y: 24 },
-            2: { x: 72, y: 24 },
-            3: { x: 120, y: 24 },
-            4: { x: 24, y: 72 },
-            5: { x: 72, y: 72 },
-            6: { x: 120, y: 72 },
-            7: { x: 24, y: 120 },
-            8: { x: 72, y: 120 },
-            9: { x: 120, y: 120 }
-        };
-
-        // Configuración de colores por estado
-        const STATUS_STYLES = {
-            'Recibido': { bg: 'bg-slate-100', text: 'text-slate-700', border: 'border-slate-300', dot: 'bg-slate-500' },
-            'En Diagnóstico': { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', dot: 'bg-purple-500' },
-            'Esperando Repuesto': { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', dot: 'bg-amber-500' },
-            'En Reparación': { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200', dot: 'bg-blue-500' },
-            'Listo para Entrega': { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', dot: 'bg-emerald-500' },
-            'Entregado': { bg: 'bg-gray-100', text: 'text-gray-500', border: 'border-gray-200', dot: 'bg-gray-400' }
-        };
-
-        // Datos de ejemplo precargados para demostración inmediata
-        const SAMPLE_ORDERS = [
-            {
-                id: 'ORD-001',
-                createdAt: '2026-11-25',
-                clientName: 'Laura Valentina Gómez',
-                clientPhone: '3115678901',
-                clientDoc: '1121945320',
-                clientEmail: 'laura.gomez@email.com',
-                brand: 'Apple',
-                model: 'iPhone 13 Pro',
-                imei: '356982104829104',
-                color: 'Azul Sierra',
-                passcode: '258096',
-                pattern: [],
-                accessories: ['Funda / Case'],
-                checklist: {
-                    screenBroken: true,
-                    backBroken: false,
-                    turnsOn: true,
-                    charges: true,
-                    camerasOk: true,
-                    buttonsOk: true,
-                    audioOk: true,
-                    waterDamage: false
-                },
-                issue: 'Cambio de pantalla OLED por caída. El táctil responde parcialmente en la zona inferior.',
-                notes: 'Marco con ligeros rayones de uso normal. FaceID funcionando.',
-                costTotal: 680000,
-                costDeposit: 300000,
-                deliveryDate: '2026-11-26',
-                assignedTech: 'Carlos M.',
-                status: 'Listo para Entrega'
-            },
-            {
-                id: 'ORD-002',
-                createdAt: '2026-11-26',
-                clientName: 'Andrés Felipe Castro',
-                clientPhone: '3208901234',
-                clientDoc: '86074512',
-                clientEmail: '',
-                brand: 'Samsung',
-                model: 'Galaxy S22 Ultra',
-                imei: '351904827164920',
-                color: 'Negro Fantasma',
-                passcode: 'Patrón: 1-4-7-8-9',
-                pattern: [1, 4, 7, 8, 9],
-                accessories: ['Tarjeta SIM', 'Funda / Case'],
-                checklist: {
-                    screenBroken: false,
-                    backBroken: false,
-                    turnsOn: true,
-                    charges: false,
-                    camerasOk: true,
-                    buttonsOk: true,
-                    audioOk: true,
-                    waterDamage: false
-                },
-                issue: 'No carga rápida, muestra aviso de humedad en el puerto USB-C y desconecta el cable.',
-                notes: 'Incluye S-Pen original.',
-                costTotal: 160000,
-                costDeposit: 50000,
-                deliveryDate: '2026-11-27',
-                assignedTech: 'Andrés R.',
-                status: 'En Reparación'
-            },
-            {
-                id: 'ORD-003',
-                createdAt: '2026-11-26',
-                clientName: 'Sofía Morales Díaz',
-                clientPhone: '3152349876',
-                clientDoc: '1006892341',
-                clientEmail: 'sofia.morales@email.com',
-                brand: 'Xiaomi',
-                model: 'Redmi Note 12 Pro',
-                imei: '864920184726193',
-                color: 'Blanco Polar',
-                passcode: '0000',
-                pattern: [],
-                accessories: ['Cargador / Cable', 'Caja Original'],
-                checklist: {
-                    screenBroken: false,
-                    backBroken: true,
-                    turnsOn: false,
-                    charges: false,
-                    camerasOk: false,
-                    buttonsOk: true,
-                    audioOk: false,
-                    waterDamage: true
-                },
-                issue: 'Equipo cayó al agua hace 2 horas y se apagó. Requiere baño químico y diagnóstico de placa.',
-                notes: 'Tapa trasera trizada en esquina inferior. Ingresa apagado sin garantía de encendido.',
-                costTotal: 120000,
-                costDeposit: 40000,
-                deliveryDate: '2026-11-28',
-                assignedTech: 'Carlos M.',
-                status: 'En Diagnóstico'
-            }
-        ];
-
-        // Inicialización al cargar la página
-        window.addEventListener('DOMContentLoaded', () => {
-            loadFromLocalStorage();
-            applySettingsToUI();
-            updateDashboard();
-            renderOrders();
-        });
-
-        // Cargar datos desde localStorage o inicializar con ejemplos
-        function loadFromLocalStorage() {
-            try {
-                const savedSettings = localStorage.getItem(STORAGE_SETTINGS_KEY);
-                if (savedSettings) {
-            
+  <script src="app.js"></script>
+</body>
+</html>
